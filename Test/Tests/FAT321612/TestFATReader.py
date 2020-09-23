@@ -2,7 +2,9 @@ import unittest
 
 
 class MyTestCase(unittest.TestCase):
-    def test_something(self):
+    def test_read_superblock(self):
+
+        load_sector = ""
         self.assertEqual(True, False)
 
 
