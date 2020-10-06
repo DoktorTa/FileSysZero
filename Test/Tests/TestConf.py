@@ -2,10 +2,12 @@ import unittest
 import logging
 import argparse
 
+from Test.Tests.FAT321612 import TestFATReader
+
 
 class TestConfiguration:
     """Запускает тестовые группы а так же настраивает при этом логгирование"""
-    __fs_tests_fat = []
+    __fs_tests_fat = [TestFATReader.TestFATReader('test_choice_fs')]
     __all_tests = __fs_tests_fat
     __chosen_fs = {"FAT": __fs_tests_fat}
 

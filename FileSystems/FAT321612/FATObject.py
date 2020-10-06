@@ -18,12 +18,7 @@ class FATFileSys:
     BPB_HiddSec: int
     BPB_TotSec32: int
 
-    @property
-    def get_version_fat(self):
-        return self._FAT_version
-
-
-class FAT1612FileSys(FATFileSys):
+    # FAT1612
     BS_DrvNum: int
     BS_Reserved1: int
     BS_BootSig: int
@@ -31,8 +26,7 @@ class FAT1612FileSys(FATFileSys):
     BS_VolLab: int
     BS_FilSysType: int
 
-
-class FAT32FileSys(FATFileSys):
+    # FAT32
     BPB_FATSz32: int
     BPB_ExtFlags: int
     BPB_FSVer: int
@@ -46,3 +40,10 @@ class FAT32FileSys(FATFileSys):
     BS_VolID: int
     BS_VolLab: int
     BS_FilSysType: int
+
+    # Для улучшения кода некторые значения вычислены и сохранены.
+    fat_size: int
+
+    @property
+    def get_version_fat(self):
+        return self._FAT_version
