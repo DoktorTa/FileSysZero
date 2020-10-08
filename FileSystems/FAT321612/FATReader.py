@@ -13,38 +13,61 @@ class FATReader:
 
     def check_num_fs(self):
 
-        root_dir_sector = (((self.data.bpb_root_ent_cnt * 32)
-                            + (self.data.bpb_byte_in_sector - 1))
-                           // self.data.bpb_byte_in_sector)
+        root_dir_sector = self.__calculation_number_sectors_root(
+            self.file_system.BPB_RootEntCnt, self.file_system.BPB_BytsPerSec)
 
+        total_sector = self.__calculation_total_sector(
+            self.file_system.BPB_TotSec16, self.file_system.BPB_TotSec32)
 
+        self.file_system.fat_size = self.__calculation_fat_size(
+            self.file_system.BPB_FATSz16, self.file_system.BPB_FATSz32)
 
-        if self.data.bpb_total_sector_16_12 != 0:
-            total_sector = self.data.bpb_total_sector_16_12
-        else:
-            total_sector = self.data.bpb_total_sector_32
+        self.file_system.all_fat_size = self.__calculation_all_fat_size(
+            self.file_system.BPB_NumFATs, self.file_system.fat_size)
 
-        all_fat_size = self.data.bpb_num_fat * fat_size
         data_sector = total_sector - (self.data.bpb_reversed_sector
                                       + all_fat_size
                                       + root_dir_sector)
         count_of_clusters = data_sector // self.data.bpb_sector_in_claster
 
+        self.file_system.set_fat_version(self.__choice_fs(count_of_clusters))
 
         return all_fat_size, root_dir_sector
 
     @staticmethod
-    def v1__calculation_fat_size(BPB_FATSz16: int, BPB_FATSz32: int) -> int:
+    def __calculation_number_sectors_root(
+            BPB_RootEntCnt: int, BPB_BytsPerSec: int) -> int:
+        """
+            :return: Количество секторов, занимаемых корневым каталогом.
+        """
+        records_dir_in_root = (BPB_RootEntCnt * 32)
+        bytes_in_root = (BPB_BytsPerSec - 1) + records_dir_in_root
+        return bytes_in_root // BPB_BytsPerSec
+
+    @staticmethod
+    def __calculation_all_fat_size(BPB_NumFATs: int, fat_size: int) -> int:
+        return BPB_NumFATs * fat_size
+
+    @staticmethod
+    def __calculation_total_sector(BPB_TotSec16: int, BPB_TotSec32: int)\
+            -> int:
+        """
+            :return: Количество всех секторов во всех четырех областях тома.
+        """
+        if BPB_TotSec16 != 0:
+            return BPB_TotSec16
+        else:
+            return BPB_TotSec32
+
+    @staticmethod
+    def __calculation_fat_size(BPB_FATSz16: int, BPB_FATSz32: int) -> int:
+        """
+            :return: Размер одной таблицы FAT.
+        """
         if BPB_FATSz16 != 0:
             return BPB_FATSz16
         else:
             return BPB_FATSz32
-
-    def v2__calculation_fat_size(self):
-        if self.file_system.BPB_FATSz16 != 0:
-            self.file_system.fat_size = self.file_system.BPB_FATSz16
-        else:
-            self.file_system.fat_size = self.file_system.BPB_FATSz32
 
     @staticmethod
     def __choice_fs(count_of_clusters: int) -> str:

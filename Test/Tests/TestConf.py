@@ -7,7 +7,11 @@ from Test.Tests.FAT321612 import TestFATReader
 
 class TestConfiguration:
     """Запускает тестовые группы а так же настраивает при этом логгирование"""
-    __fs_tests_fat = [TestFATReader.TestFATReader('test_choice_fs')]
+    __fs_tests_fat = [TestFATReader.TestFATReader('test_choice_fs'),
+                      TestFATReader.TestFATReader('test_calculation_fat_size'),
+                      TestFATReader.TestFATReader('test_calculation_total_sector'),
+                      TestFATReader.TestFATReader('test_calculation_all_fat_size'),
+                      TestFATReader.TestFATReader('test_calculation_number_sectors_root')]
     __all_tests = __fs_tests_fat
     __chosen_fs = {"FAT": __fs_tests_fat}
 
@@ -17,6 +21,7 @@ class TestConfiguration:
     def configuration_all_tests(self):
         all_tests_group = unittest.TestSuite()
         all_tests_group.addTests(self.__all_tests)
+        # all_tests_group.addTests(self.__all_tests)
         self.__run_test(all_tests_group)
 
     def configuration_test_chosen_fs(self, fs_chosen: str):

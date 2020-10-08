@@ -2,7 +2,7 @@ class FATFileSys:
     FAT16_LEN_RECORD = 2
     FAT32_LEN_RECORD = 4
 
-    _FAT_version = "FAT"
+    FAT_VERSION = "FAT"
     BS_jmpBoot: int
     BS_OEMName: int
     BPB_BytsPerSec: int
@@ -43,7 +43,14 @@ class FATFileSys:
 
     # Для улучшения кода некторые значения вычислены и сохранены.
     fat_size: int
+    all_fat_size: int
 
-    @property
-    def get_version_fat(self):
-        return self._FAT_version
+    def set_fat_version(self, fat_version: str):
+        if fat_version in "FAT12FAT16FAT32":
+            self.FAT_VERSION = fat_version
+
+    def __str__(self):
+        string_info = f"{self.FAT_VERSION=}\n" \
+                      f"{self.fat_size=}\n" \
+                      f"{self.all_fat_size=}\n"
+        return string_info
