@@ -1,3 +1,5 @@
+import logging
+
 from FAT321612.FATObject import FATFileSys
 
 
@@ -11,7 +13,13 @@ class FATReader:
     def __parse_super_block(self):
         pass
 
-    def check_num_fs(self):
+    def _calculation_num_fat_and_root_dir_sector(self):
+        """
+            Функция вычисляет номер фс fat и устанавливет его для обьекта,
+            а тк же вычисляет и возврашает колличество секторов корневого
+            каталога.
+            :return: Количество секторов, занимаемых корневым каталогом.
+        """
 
         root_dir_sector = self.__calculation_number_sectors_root(
             self.file_system.BPB_RootEntCnt, self.file_system.BPB_BytsPerSec)
@@ -25,14 +33,36 @@ class FATReader:
         self.file_system.all_fat_size = self.__calculation_all_fat_size(
             self.file_system.BPB_NumFATs, self.file_system.fat_size)
 
-        data_sector = total_sector - (self.data.bpb_reversed_sector
-                                      + all_fat_size
-                                      + root_dir_sector)
-        count_of_clusters = data_sector // self.data.bpb_sector_in_claster
+        data_sector = self.__calculation_data_sector(
+            total_sector, self.file_system.all_fat_size, root_dir_sector,
+            self.file_system.BPB_RsvdSecCnt)
+
+        count_of_clusters = self.__calculation_count_of_clusters(
+            data_sector, self.file_system.BPB_SecPerClus)
 
         self.file_system.set_fat_version(self.__choice_fs(count_of_clusters))
 
-        return all_fat_size, root_dir_sector
+        logging.info(f"{self.file_system.FAT_VERSION=}")
+
+        return root_dir_sector
+
+    @staticmethod
+    def __calculation_count_of_clusters(data_sector: int, BPB_SecPerClus: int)\
+            -> int:
+        """
+            :return: Колличество всех кластеров данных в системе.
+        """
+        return data_sector // BPB_SecPerClus
+
+    @staticmethod
+    def __calculation_data_sector(total_sector: int, all_fat_size: int,
+                                  root_dir_sector: int, BPB_ResvdSecCnt: int)\
+            -> int:
+        """
+            :return: Колличество всех секторов с данными.
+        """
+        no_data_sector = (BPB_ResvdSecCnt + all_fat_size + root_dir_sector)
+        return total_sector - no_data_sector
 
     @staticmethod
     def __calculation_number_sectors_root(

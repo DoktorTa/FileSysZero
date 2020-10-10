@@ -11,7 +11,10 @@ class TestConfiguration:
                       TestFATReader.TestFATReader('test_calculation_fat_size'),
                       TestFATReader.TestFATReader('test_calculation_total_sector'),
                       TestFATReader.TestFATReader('test_calculation_all_fat_size'),
-                      TestFATReader.TestFATReader('test_calculation_number_sectors_root')]
+                      TestFATReader.TestFATReader('test_calculation_number_sectors_root'),
+                      TestFATReader.TestFATReader('test_calculation_data_sector'),
+                      TestFATReader.TestFATReader('test_calculation_count_of_clusters'),
+                      TestFATReader.TestFATReader('test_calculation_num_fat_and_root_dir_sector')]
     __all_tests = __fs_tests_fat
     __chosen_fs = {"FAT": __fs_tests_fat}
 
@@ -29,9 +32,31 @@ class TestConfiguration:
         tests_group.addTests(self.__chosen_fs.get(fs_chosen))
         self.__run_test(tests_group)
 
+    def __logging_configuration(self, level_logging=logging.CRITICAL):
+        format_msg = '%(asctime)s %(name)s %(levelname)s:%(message)s'
+        logging.basicConfig(level=level_logging, format=format_msg)
+        logging.StreamHandler.emit = self.add_coloring_to_emit_ansi(
+            logging.StreamHandler.emit)
+
     @staticmethod
-    def __logging_configuration(level_logging=logging.CRITICAL):
-        logging.basicConfig(level=level_logging)
+    def add_coloring_to_emit_ansi(fn):
+        def new(*args):
+            levelno = args[1].levelno
+            if levelno >= 50:
+                color = '\x1b[31m'  # red
+            elif levelno >= 40:
+                color = '\x1b[31m'  # red
+            elif levelno >= 30:
+                color = '\x1b[33m'  # yellow
+            elif levelno >= 20:
+                color = '\x1b[32m'  # green
+            elif levelno >= 10:
+                color = '\x1b[35m'  # pink
+            else:
+                color = '\x1b[0m'  # normal
+            args[1].msg = color + args[1].msg + '\x1b[0m'  # normal
+            return fn(*args)
+        return new
 
     @staticmethod
     def __run_test(test_group: unittest.TestSuite):
@@ -57,7 +82,7 @@ def arguments() -> (str, int):
                         help="a - тестирование всех модулей,\n"
                              "FAT - тестирование FAT321612.")
 
-    parser.add_argument('-l', action="store", dest="log_lvl", default=1,
+    parser.add_argument('-l', action="store", dest="log_lvl", default=[1],
                         type=int, nargs=1,
                         help="Logging level:\n"
                              "0 - DEBUG,\n"
@@ -66,7 +91,7 @@ def arguments() -> (str, int):
 
     args = parser.parse_args()
     fs_type = args.fs_type
-    log_lvl = args.log_lvl
+    log_lvl = args.log_lvl[0]
     return fs_type, log_lvl
 
 
