@@ -34,12 +34,12 @@ class FATFileSys:
     BPB_FSInfo: int = 0
     BPB_BkBootSec: int = 0
     BPB_Reserved: int = 0
-    BS_DrvNum: int = 0
-    BS_Reserved1: int = 0
-    BS_BootSig: int = 0
-    BS_VolID: int = 0
-    BS_VolLab: int = 0
-    BS_FilSysType: int = 0
+    # BS_DrvNum: int = 0
+    # BS_Reserved1: int = 0
+    # BS_BootSig: int = 0
+    # BS_VolID: int = 0
+    # BS_VolLab: int = 0
+    # BS_FilSysType: int = 0
 
     # Для улучшения кода некторые значения вычислены и сохранены.
     fat_size: int = 0

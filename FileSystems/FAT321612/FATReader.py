@@ -1,4 +1,7 @@
 import logging
+import struct
+import functools
+import operator
 
 from FAT321612.FATObject import FATFileSys
 
@@ -11,7 +14,63 @@ class FATReader:
         self.__mount_fs = mount_fs
 
     def __parse_super_block(self):
-        pass
+        len_super_block = 512
+        super_block = self.__read_block(0, len_super_block)
+        super_block_part_one = super_block[1:40]
+        super_block_part_two = super_block[36:90]
+        # print(super_block_part_one)
+        # print('two', super_block_part_two)
+        super_block_struct = struct.unpack('<H8chBhb2hB3h3i', super_block_part_one)
+        print(super_block_struct)
+        self.__change_first_part_super_block(super_block_struct)
+        self.__parse_fat32_super_block(super_block_part_two)
+        self._calculation_num_fat_and_root_dir_sector()
+        # print(self.file_system.__dict__)
+
+    def __parse_fat32_super_block(self, super_block_part_two):
+        # print(len(super_block_part_two))
+        part_two_super_block = struct.unpack('<i2hi2h12c3BI11c8c', super_block_part_two)
+        self.__change_second_part_super_block(part_two_super_block)
+
+    def __change_second_part_super_block(self, super_block_struct: tuple):
+        self.file_system.BPB_FATSz32 = super_block_struct[0]
+        self.file_system.BPB_ExtFlags = super_block_struct[1]
+        self.file_system.BPB_FSVer = super_block_struct[2]
+        self.file_system.BPB_RootClus = super_block_struct[3]
+        self.file_system.BPB_FSInfo = super_block_struct[4]
+        self.file_system.BPB_BkBootSec = super_block_struct[5]
+        self.file_system.BPB_Reserved = functools.reduce(
+            operator.add, (super_block_struct[6:18])).decode('ascii')
+        self.__change_third_part_super_block(super_block_struct[18:])
+
+    def __change_third_part_super_block(self, super_block_struct: tuple):
+        self.file_system.BS_DrvNum = super_block_struct[0]
+        self.file_system.BS_Reserved1 = super_block_struct[1]
+        self.file_system.BS_BootSig = super_block_struct[2]
+        self.file_system.BS_VolID = super_block_struct[3]
+        self.file_system.BS_VolLab = functools.reduce(
+            operator.add, (super_block_struct[4:15])).decode('ascii')
+        self.file_system.BS_FilSysType = functools.reduce(
+            operator.add, (super_block_struct[15:24])).decode('ascii')
+
+    def __change_first_part_super_block(self, super_block_struct: tuple):
+        self.file_system = FATFileSys()
+
+        self.file_system.BS_jmpBoot = super_block_struct[0]
+        self.file_system.BS_OEMName = functools.reduce(
+            operator.add, (super_block_struct[1:9])).decode('ascii')
+        self.file_system.BPB_BytsPerSec = super_block_struct[9]
+        self.file_system.BPB_SecPerClus = super_block_struct[10]
+        self.file_system.BPB_RsvdSecCnt = super_block_struct[11]
+        self.file_system.BPB_NumFATs = super_block_struct[12]
+        self.file_system.BPB_RootEntCnt = super_block_struct[13]
+        self.file_system.BPB_TotSec16 = super_block_struct[14]
+        self.file_system.BPB_Media = super_block_struct[15]
+        self.file_system.BPB_FATSz16 = super_block_struct[16]
+        self.file_system.BPB_SecPerTrk = super_block_struct[17]
+        self.file_system.BPB_NumHeads = super_block_struct[18]
+        self.file_system.BPB_HiddSec = super_block_struct[19]
+        self.file_system.BPB_TotSec32 = super_block_struct[20]
 
     def _calculation_num_fat_and_root_dir_sector(self):
         """
@@ -121,5 +180,6 @@ class FATReader:
             return "FAT32"
 
     def __read_block(self, seek_block: int, len_block: int) -> bytes:
+        return b"z"
         self.__mount_fs.seek(seek_block)
         return self.__mount_fs.read(len_block)

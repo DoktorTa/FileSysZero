@@ -14,7 +14,9 @@ class TestConfiguration:
                       TestFATReader.TestFATReader('test_calculation_number_sectors_root'),
                       TestFATReader.TestFATReader('test_calculation_data_sector'),
                       TestFATReader.TestFATReader('test_calculation_count_of_clusters'),
-                      TestFATReader.TestFATReader('test_calculation_num_fat_and_root_dir_sector')]
+                      TestFATReader.TestFATReader('test_calculation_num_fat_and_root_dir_sector'),
+                      TestFATReader.TestFATReader('test_parse_super_block'),
+                      TestFATReader.TestFATReader('test_parse_fat32_super_block')]
     __all_tests = __fs_tests_fat
     __chosen_fs = {"FAT": __fs_tests_fat}
 
@@ -43,7 +45,7 @@ class TestConfiguration:
         def new(*args):
             levelno = args[1].levelno
             if levelno >= 50:
-                color = '\x1b[31m'  # red
+                color = '\x1b[41m'  # red
             elif levelno >= 40:
                 color = '\x1b[31m'  # red
             elif levelno >= 30:
@@ -51,7 +53,7 @@ class TestConfiguration:
             elif levelno >= 20:
                 color = '\x1b[32m'  # green
             elif levelno >= 10:
-                color = '\x1b[35m'  # pink
+                color = '\x1b[34m'  # blue
             else:
                 color = '\x1b[0m'  # normal
             args[1].msg = color + args[1].msg + '\x1b[0m'  # normal
