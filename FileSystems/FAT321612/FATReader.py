@@ -21,7 +21,6 @@ class FATReader:
         # print(super_block_part_one)
         # print('two', super_block_part_two)
         super_block_struct = struct.unpack('<H8chBhb2hB3h3i', super_block_part_one)
-        print(super_block_struct)
         self.__change_first_part_super_block(super_block_struct)
         self.__parse_fat32_super_block(super_block_part_two)
         self._calculation_num_fat_and_root_dir_sector()
