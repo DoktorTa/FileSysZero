@@ -5,33 +5,36 @@ from FAT321612 import FATReader, FATObject
 
 
 class TestFATReader:
-    def test_choice_fs(self):
-        fat = FATReader.FATReader()
-        assert fat._FATReader__choice_fs(65526) == "FAT32"
-        assert fat._FATReader__choice_fs(101200) == "FAT32"
-        assert fat._FATReader__choice_fs(65524) == "FAT16"
-        assert fat._FATReader__choice_fs(4085) == "FAT16"
-        assert fat._FATReader__choice_fs(4084) == "FAT12"
-        assert fat._FATReader__choice_fs(257) == "FAT12"
 
-    def test_calculation_fat_size(self):
+    @pytest.mark.parametrize("count_cluster, name_fs",
+                             [(65526, "FAT32"), (101200, "FAT32"),
+                              (65524, "FAT16"), (4085, "FAT16"),
+                              (4084, "FAT12"), (257, "FAT12")])
+    def test_choice_fs(self, count_cluster: int, name_fs: str):
         fat = FATReader.FATReader()
-        assert fat._FATReader__calculation_fat_size(0, 2) == 2
-        assert fat._FATReader__calculation_fat_size(2, 0) == 2
+        assert fat._FATReader__choice_fs(count_cluster) == name_fs
 
-    def test_calculation_total_sector(self):
+    @pytest.mark.parametrize("fat_sz16, fat_sz32, fat_size", [(0, 2, 2), (2, 0, 2)])
+    def test_calculation_fat_size(self, fat_sz16: int, fat_sz32: int, fat_size: int):
         fat = FATReader.FATReader()
-        assert fat._FATReader__calculation_total_sector(0, 2) == 2
-        assert fat._FATReader__calculation_total_sector(2, 0) == 2
+        assert fat._FATReader__calculation_fat_size(fat_sz16, fat_sz32) == fat_size
+
+    @pytest.mark.parametrize("BPB_TotSec16, BPB_TotSec32, count_sec", [(0, 2, 2), (2, 0, 2)])
+    def test_calculation_total_sector(self, BPB_TotSec16: int,
+                                      BPB_TotSec32: int, count_sec: int):
+        fat = FATReader.FATReader()
+        assert fat._FATReader__calculation_total_sector(BPB_TotSec16, BPB_TotSec32) == count_sec
 
     def test_calculation_all_fat_size(self):
         fat = FATReader.FATReader()
         assert fat._FATReader__calculation_all_fat_size(2, 484600) == 969200
 
-    def test_calculation_number_sectors_root(self):
+    @pytest.mark.parametrize("BPB_RootEntCnt, BPB_BytsPerSec, root_sec",
+                             [(512, 512, 32), (0, 512, 0)])
+    def test_calculation_number_sectors_root(self, BPB_RootEntCnt: int,
+                                             BPB_BytsPerSec: int, root_sec: int):
         fat = FATReader.FATReader()
-        assert fat._FATReader__calculation_number_sectors_root(512, 512) == 32
-        assert fat._FATReader__calculation_number_sectors_root(0, 512) == 0
+        assert fat._FATReader__calculation_number_sectors_root(BPB_RootEntCnt, BPB_BytsPerSec) == root_sec
 
     def test_calculation_data_sector(self):
         fat = FATReader.FATReader()
@@ -113,7 +116,7 @@ class TestFATReader:
         fat._FATReader__parse_fat32_super_block(part_two_super_block)
         assert fat.file_system.__dict__ == fat32_obj.__dict__
 
-    def test_parse_super_block(self, mocker):
+    def test_parse_super_block_fat32(self, mocker):
         fat32_obj = FATObject.FATFileSys()
 
         fat32_obj.FAT_VERSION = "FAT32"
@@ -190,5 +193,4 @@ class TestFATReader:
 
         assert fat.file_system.__dict__ == fat32_obj.__dict__
 
-        fat16_obj = FATObject.FATFileSys()
 

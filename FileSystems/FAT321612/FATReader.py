@@ -105,8 +105,7 @@ class FATReader:
         return root_dir_sector
 
     @staticmethod
-    def __calculation_count_of_clusters(data_sector: int, BPB_SecPerClus: int)\
-            -> int:
+    def __calculation_count_of_clusters(data_sector: int, BPB_SecPerClus: int) -> int:
         """
             :return: Колличество всех кластеров данных в системе.
         """
@@ -114,8 +113,7 @@ class FATReader:
 
     @staticmethod
     def __calculation_data_sector(total_sector: int, all_fat_size: int,
-                                  root_dir_sector: int, BPB_ResvdSecCnt: int)\
-            -> int:
+                                  root_dir_sector: int, BPB_ResvdSecCnt: int) -> int:
         """
             :return: Колличество всех секторов с данными.
         """
@@ -137,8 +135,7 @@ class FATReader:
         return BPB_NumFATs * fat_size
 
     @staticmethod
-    def __calculation_total_sector(BPB_TotSec16: int, BPB_TotSec32: int)\
-            -> int:
+    def __calculation_total_sector(BPB_TotSec16: int, BPB_TotSec32: int) -> int:
         """
             :return: Количество всех секторов во всех четырех областях тома.
         """
