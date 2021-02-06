@@ -1,13 +1,16 @@
 class FileSystemZero:
+
+
     def __init__(self):
-        pass
+
 
     def __enter__(self, file_path: str, mode: str, file_systems_names: tuple, all: bool):
 
         if not self.__check_file_type(file_path):
             raise ValueError("This file is not fs file")
 
-        
+
+
         pass
 
     def __check_file_type(self, file_path: str) -> bool:
