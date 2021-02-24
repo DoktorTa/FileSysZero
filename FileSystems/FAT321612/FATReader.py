@@ -10,8 +10,9 @@ class FATReader:
     __mount_fs = None
     file_system: FATFileSys
 
-    def __int__(self, mount_fs):
+    def __init__(self, mount_fs):
         self.__mount_fs = mount_fs
+        # self.__parse_super_block()
 
     def __parse_super_block(self):
         len_super_block = 512
@@ -21,17 +22,92 @@ class FATReader:
         # print(super_block_part_one)
         # print('two', super_block_part_two)
         super_block_struct = struct.unpack('<H8chBhb2hB3h3i', super_block_part_one)
-        self.__change_first_part_super_block(super_block_struct)
+        self.__parse_first_part_super_block(super_block_struct)
         self.__parse_fat32_super_block(super_block_part_two)
-        self._calculation_num_fat_and_root_dir_sector()
+        root_dir_sector = self._calculation_num_fat_and_root_dir_sector()
+
+        fat_seek_b = self.file_system.BPB_RsvdSecCnt * self.file_system.BPB_BytsPerSec
+        print(fat_seek_b)
         # print(self.file_system.__dict__)
+
+    def get_root(self):
+        """
+            Получить колличество секторов
+            Получить смешение корневого
+            перейти на смещшение
+            прочесть кластер
+            декремента колличества секторов
+            распарсить сектор как каталог
+        :return:
+        """
+
+        pass
+
+    def get_next_group_clusters(self):
+        """
+            Строит последовательность из кластеров, по которой можно прочесть файл.
+            Так как файлы могут занимать множество кластеров, то за один раз можно
+            построить только последовательность ограниченной длинны.
+        :return:
+        """
+        len_group = 8
+        # fat_table = self.__read_block(fat_seek, fat_len)
+        # for i in range(len_group):
+            # fat_table[fat_offset]
+
+    def __convert_byte_sequence_to_list_clusters(self, byte_sequence: bytearray) -> list:
+        """
+            Данный метод в данной версии способе работать только лишь с FAT32.
+
+            Преобразует байтовый массив фат таблицы, в лист содержавший в себе кластеры.
+        :param byte_sequence: байтовый массив фат таблицы
+        :return: лист содержавший в себе кластеры
+        """
+
+        len_cluster: int = 0
+
+        if self.file_system.FAT_VERSION == 'FAT32':
+            len_cluster = 8
+
+        byte_sequence_str: str = byte_sequence.hex()
+
+        # Данное генераторное выражение делит одну большую строку с кластерами на лист
+        # в котором содержатся кластеры.
+        list_clusters: list = \
+            [byte_sequence_str[num_start_byte_claster:num_start_byte_claster + len_cluster]
+             for num_start_byte_claster in range(0, len(byte_sequence_str), len_cluster)]
+
+        # Поскольку все кластеры, это строка, то этот метод преобразовывает их в число,
+        # так же, первые четыре байта кластера не играют роли поэтому их нельзя учитывать
+        # в приведении.
+        list_clusters = [int(claster[1:], 16) for claster in list_clusters]
+
+        return list_clusters
+
+    def get_offset_in_fat_table(self, num_claster: int, num_fat=0):
+        """
+        this_fat_sec_num - это номер сектора FAT, который содержит запись для кластера N в первой FAT.
+        num_fat_seek - используется для получения номера сектора во последующих FAT
+        """
+
+        if self.file_system.FAT_VERSION == "FAT16":
+            fat_offset = num_claster * 2
+        elif self.file_system.FAT_VERSION == "FAT32":
+            fat_offset = num_claster * 4
+        else:  # FAT12
+            fat_offset = num_fat + (num_fat // 2)
+
+        num_fat_seek = self.file_system.fat_size * num_fat
+        this_fat_sec_num = self.file_system.BPB_RsvdSecCnt + (fat_offset // self.file_system.BPB_BytsPerSec)
+        this_fat_sec_num += + num_fat_seek
+        this_fat_ent_offset = fat_offset % self.file_system.BPB_BytsPerSec
 
     def __parse_fat32_super_block(self, super_block_part_two):
         # print(len(super_block_part_two))
         part_two_super_block = struct.unpack('<i2hi2h12c3BI11c8c', super_block_part_two)
-        self.__change_second_part_super_block(part_two_super_block)
+        self.__parse_second_part_super_block(part_two_super_block)
 
-    def __change_second_part_super_block(self, super_block_struct: tuple):
+    def __parse_second_part_super_block(self, super_block_struct: tuple):
         self.file_system.BPB_FATSz32 = super_block_struct[0]
         self.file_system.BPB_ExtFlags = super_block_struct[1]
         self.file_system.BPB_FSVer = super_block_struct[2]
@@ -40,9 +116,9 @@ class FATReader:
         self.file_system.BPB_BkBootSec = super_block_struct[5]
         self.file_system.BPB_Reserved = functools.reduce(
             operator.add, (super_block_struct[6:18])).decode('ascii')
-        self.__change_third_part_super_block(super_block_struct[18:])
+        self.__parse_third_part_super_block(super_block_struct[18:])
 
-    def __change_third_part_super_block(self, super_block_struct: tuple):
+    def __parse_third_part_super_block(self, super_block_struct: tuple):
         self.file_system.BS_DrvNum = super_block_struct[0]
         self.file_system.BS_Reserved1 = super_block_struct[1]
         self.file_system.BS_BootSig = super_block_struct[2]
@@ -52,7 +128,7 @@ class FATReader:
         self.file_system.BS_FilSysType = functools.reduce(
             operator.add, (super_block_struct[15:24])).decode('ascii')
 
-    def __change_first_part_super_block(self, super_block_struct: tuple):
+    def __parse_first_part_super_block(self, super_block_struct: tuple):
         self.file_system = FATFileSys()
 
         self.file_system.BS_jmpBoot = super_block_struct[0]
@@ -69,12 +145,13 @@ class FATReader:
         self.file_system.BPB_SecPerTrk = super_block_struct[17]
         self.file_system.BPB_NumHeads = super_block_struct[18]
         self.file_system.BPB_HiddSec = super_block_struct[19]
+
         self.file_system.BPB_TotSec32 = super_block_struct[20]
 
     def _calculation_num_fat_and_root_dir_sector(self):
         """
-            Функция вычисляет номер фс fat и устанавливет его для обьекта,
-            а тк же вычисляет и возврашает колличество секторов корневого
+            Функция вычисляет номер фс fat и устанавливает его для объекта,
+            а так же вычисляет и возвращает количество секторов корневого
             каталога.
             :return: Количество секторов, занимаемых корневым каталогом.
         """
@@ -179,3 +256,8 @@ class FATReader:
         return b"z"
         self.__mount_fs.seek(seek_block)
         return self.__mount_fs.read(len_block)
+
+
+if __name__ == '__main__':
+    with open(r"A:\ProgrammingLanguages\InDeveloping\Python\FileSysZero\Test\TestResources\FAT321612\testFAT32.img", "r") as file:
+        f = FATReader(file)

@@ -1,23 +1,27 @@
 from abc import ABCMeta, abstractmethod
 
 
-class IFSWork(metaclass=ABCMeta):
+class IComSysRead(metaclass=ABCMeta):
     """
-        Интерфейс который определяет методы работы с файловыми системами
-
-        Metods:
-        ~~~~~~~~~~~~~~~~~~
-            **read**
-            **cd**
-            **get_root**
-            **get_pwd**
+        Интерфейс который определяет методы работы с файловыми системами в редиме чтения
     """
+    __pointer_in_file: int = 0
+    __pwd: list
+    __root: list
 
     @abstractmethod
     def read(self, dir_now: str, num_in_dir: int, count: int, pointer: int) \
             -> (bytes, int, int):
         """
-            Прочесть данный блок||кластер файловой системы.
+            Прочесть данный файл.
+
+
+        :param dir_now:
+        :param num_in_dir: номер элемента в директории.
+        :param pointer:
+        :return:
+        """
+        """         
             Первый аргумент: лист элементов.
             Второй: номер в листе.
             Третий: количество блоков на котороенеобходимо провести чтение с
@@ -28,6 +32,8 @@ class IFSWork(metaclass=ABCMeta):
             Первый аргумент ответа: прочитаные блоки.
             Второй: текушая позиция указателя.
             Третий: номер ощибки, без ощибки == 0.
+            
+            
         """
         print("read abc metod: read block file")
 
