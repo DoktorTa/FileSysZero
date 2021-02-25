@@ -45,6 +45,11 @@ class FATFileSys:
     fat_size: int = 0
     all_fat_size: int = 0
 
+    FAT_TABLE: list = []
+
+    EOC_LABEL: int = 0
+    ERROR_LABEL: int = 0
+
     def set_fat_version(self, fat_version: str):
         if fat_version in "FAT12FAT16FAT32":
             self.FAT_VERSION = fat_version

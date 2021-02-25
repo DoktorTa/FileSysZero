@@ -30,6 +30,7 @@ class FATReader:
         print(fat_seek_b)
         # print(self.file_system.__dict__)
 
+
     def get_root(self):
         """
             Получить колличество секторов
@@ -41,19 +42,59 @@ class FATReader:
         :return:
         """
 
+
+        # fat_table = self.__read_block(fat_seek, self.file_system.fat_size)
+        # self.file_system.FAT_TABLE = self.__convert_byte_sequence_to_list_clusters(fat_table)
+
         pass
 
-    def get_next_group_clusters(self):
+    def __ask_eoc_label(self) -> None:
+        """
+            Устанавливает метку для конечного кластера файла.
+        """
+        if self.file_system.FAT_VERSION == 'FAT12':
+            self.file_system.EOC_LABEL = 0x0FFF
+        elif self.file_system.FAT_VERSION == 'FAT16':
+            self.file_system.EOC_LABEL = 0x0FFFF
+        elif self.file_system.FAT_VERSION == 'FAT32':
+            self.file_system.EOC_LABEL = 0x0FFFFFFF
+
+    def __ask_error_label(self) -> None:
+        """
+            Устанавливает метку для поврежденного кластера файла.
+        """
+        if self.file_system.FAT_VERSION == 'FAT12':
+            self.file_system.ERROR_LABEL = 0x0FF7
+        elif self.file_system.FAT_VERSION == 'FAT16':
+            self.file_system.ERROR_LABEL = 0x0FFF7
+        elif self.file_system.FAT_VERSION == 'FAT32':
+            self.file_system.ERROR_LABEL = 0x0FFFFFF7
+
+    def get_next_group_clusters(self, num_start_cluster: int, len_sequence: int) -> (list, str):
         """
             Строит последовательность из кластеров, по которой можно прочесть файл.
             Так как файлы могут занимать множество кластеров, то за один раз можно
             построить только последовательность ограниченной длинны.
         :return:
         """
-        len_group = 8
-        # fat_table = self.__read_block(fat_seek, fat_len)
-        # for i in range(len_group):
-            # fat_table[fat_offset]
+        error: str = ''
+
+        cluster_sequence: list = []
+        for i in range(len_sequence):
+            next_cluster: int = self.file_system.FAT_TABLE[num_start_cluster]
+            num_start_cluster = next_cluster
+
+            if next_cluster == self.file_system.ERROR_LABEL:
+                error = 'Last label is error.'
+                break
+            elif next_cluster == self.file_system.EOC_LABEL:
+                break
+
+            cluster_sequence.append(next_cluster)
+
+        return cluster_sequence, error
+
+
 
     def __convert_byte_sequence_to_list_clusters(self, byte_sequence: bytearray) -> list:
         """

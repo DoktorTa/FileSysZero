@@ -11,37 +11,37 @@ class TestFATReader:
                               (65524, "FAT16"), (4085, "FAT16"),
                               (4084, "FAT12"), (257, "FAT12")])
     def test_choice_fs(self, count_cluster: int, name_fs: str):
-        fat = FATReader.FATReader()
+        fat = FATReader.FATReader
         assert fat._FATReader__choice_fs(count_cluster) == name_fs
 
     @pytest.mark.parametrize("fat_sz16, fat_sz32, fat_size", [(0, 2, 2), (2, 0, 2)])
     def test_calculation_fat_size(self, fat_sz16: int, fat_sz32: int, fat_size: int):
-        fat = FATReader.FATReader()
+        fat = FATReader.FATReader
         assert fat._FATReader__calculation_fat_size(fat_sz16, fat_sz32) == fat_size
 
     @pytest.mark.parametrize("BPB_TotSec16, BPB_TotSec32, count_sec", [(0, 2, 2), (2, 0, 2)])
     def test_calculation_total_sector(self, BPB_TotSec16: int,
                                       BPB_TotSec32: int, count_sec: int):
-        fat = FATReader.FATReader()
+        fat = FATReader.FATReader
         assert fat._FATReader__calculation_total_sector(BPB_TotSec16, BPB_TotSec32) == count_sec
 
     def test_calculation_all_fat_size(self):
-        fat = FATReader.FATReader()
+        fat = FATReader.FATReader
         assert fat._FATReader__calculation_all_fat_size(2, 484600) == 969200
 
     @pytest.mark.parametrize("BPB_RootEntCnt, BPB_BytsPerSec, root_sec",
                              [(512, 512, 32), (0, 512, 0)])
     def test_calculation_number_sectors_root(self, BPB_RootEntCnt: int,
                                              BPB_BytsPerSec: int, root_sec: int):
-        fat = FATReader.FATReader()
+        fat = FATReader.FATReader
         assert fat._FATReader__calculation_number_sectors_root(BPB_RootEntCnt, BPB_BytsPerSec) == root_sec
 
     def test_calculation_data_sector(self):
-        fat = FATReader.FATReader()
+        fat = FATReader.FATReader
         assert fat._FATReader__calculation_data_sector(1000, 8, 12, 2) == 978
 
     def test_calculation_count_of_clusters(self):
-        fat = FATReader.FATReader()
+        fat = FATReader.FATReader
         assert fat._FATReader__calculation_count_of_clusters(64, 8) == 8
 
     def test_calculation_num_fat_and_root_dir_sector(self):
@@ -83,7 +83,7 @@ class TestFATReader:
 
         for i in range(len(fat_values)):
 
-            fat = FATReader.FATReader()
+            fat = FATReader.FATReader("")
             fat.file_system = fat_obj[i]
             x = fat._calculation_num_fat_and_root_dir_sector()
             assert fat.file_system.FAT_VERSION == fat_values[i]
@@ -97,8 +97,7 @@ class TestFATReader:
         fat32_obj.BPB_RootClus = 2
         fat32_obj.BPB_FSInfo = 1
         fat32_obj.BPB_BkBootSec = 6
-        fat32_obj.BPB_Reserved = \
-            '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+        fat32_obj.BPB_Reserved = '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
 
         fat32_obj.BS_DrvNum = 128
         fat32_obj.BS_Reserved1 = 0
@@ -111,7 +110,7 @@ class TestFATReader:
                                b'\x00\x00\x01\x00\x06\x00\x00\x00\x00\x00' \
                                b'\x00\x00\x00\x00\x00\x00\x00\x00\x80\x00)' \
                                b'\xc3\xa6g\xc9NO NAME    FAT32   '
-        fat = FATReader.FATReader()
+        fat = FATReader.FATReader("")
         fat.file_system = FATObject.FATFileSys()
         fat._FATReader__parse_fat32_super_block(part_two_super_block)
         assert fat.file_system.__dict__ == fat32_obj.__dict__
@@ -188,9 +187,39 @@ class TestFATReader:
 
         mocker.patch('FAT321612.FATReader.FATReader._FATReader__read_block', return_value=block_fat32)
 
-        fat = FATReader.FATReader()
+        fat = FATReader.FATReader("")
         fat._FATReader__parse_super_block()
 
         assert fat.file_system.__dict__ == fat32_obj.__dict__
 
+    def test_get_next_group_clusters(self):
+        fat = FATObject.FATFileSys()
+        fat.EOC_LABEL = 0x0FFF
+        fat.ERROR_LABEL = 0xFF7
+        fat.FAT_TABLE = [1, 2, 3, 4, 5, 4095, 7, 8, 9, 4087]
+        fatReader = FATReader.FATReader
+        fatReader.file_system = fat
 
+        answer_good_sq = [1, 2, 3, 4, 5]
+        answer_error_sq = [7, 8, 9]
+
+        good_sq = fatReader.get_next_group_clusters(fatReader, 0, 8)
+        error_sq = fatReader.get_next_group_clusters(fatReader, 6, 8)
+
+        assert good_sq == (answer_good_sq, '')
+        assert error_sq == (answer_error_sq, 'Last label is error.')
+
+    def test_convert_byte_sequence_to_list_clusters(self):
+        fat = FATObject.FATFileSys()
+        fat.set_fat_version("FAT32")
+        byte_sequence_fat32 = \
+            b'\x10\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00\x03\x00\x00\x00\x04' \
+            b'\x00\x00\x00\x05\x00\x00\x00\x06\x00\x00\x00\x07\x00\x00\x00\x08' \
+            b'\x00\x00\x00\x09\x00\x00\x00\x0a\x00\x00\x00\x0b\x50\x00\x00\x0c'
+        list_fat32 = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+        fatReader = FATReader.FATReader
+        fatReader.file_system = fat
+
+        answer = fatReader._FATReader__convert_byte_sequence_to_list_clusters(fatReader, byte_sequence_fat32)
+
+        assert answer == list_fat32
