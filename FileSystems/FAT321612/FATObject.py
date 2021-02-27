@@ -59,3 +59,69 @@ class FATFileSys:
                       f"{self.fat_size=}\n" \
                       f"{self.all_fat_size=}\n"
         return string_info
+
+
+class FATFile:
+    DIR_NAME: str = ''
+    DIR_Attr: int = 0
+    DIR_NTRes: int = 0
+    DIR_CrtTimeTenth: int = 0
+    DIR_CrtTime: int = 0
+    DIR_CrtDate: int = 0
+    DIR_LstAccDate: int = 0
+    DIR_FstClusHI: int = 0
+    DIR_WrtTime: int = 0
+    DIR_WrtDate: int = 0
+    DIR_FstClusLO: int = 0
+    DIR_FileSize: int = 0
+
+    DIR_NAME_LONG: str = ''
+
+    # TODO: ух бля, сюда нужно что то поэлегантней.
+    def __eq__(self, other):
+        if isinstance(other, FATFile):
+            answer: list = []
+            answer.append(self.DIR_NAME == other.DIR_NAME)
+            answer.append(self.DIR_Attr == other.DIR_Attr)
+            answer.append(self.DIR_NTRes == other.DIR_NTRes)
+            answer.append(self.DIR_CrtTimeTenth == other.DIR_CrtTimeTenth)
+            answer.append(self.DIR_CrtTime == other.DIR_CrtTime)
+            answer.append(self.DIR_CrtDate == other.DIR_CrtDate)
+            answer.append(self.DIR_LstAccDate == other.DIR_LstAccDate)
+            answer.append(self.DIR_FstClusHI == other.DIR_FstClusHI)
+            answer.append(self.DIR_WrtTime == other.DIR_WrtTime)
+            answer.append(self.DIR_WrtDate == other.DIR_WrtDate)
+            answer.append(self.DIR_FstClusLO == other.DIR_FstClusLO)
+            answer.append(self.DIR_FileSize == other.DIR_FileSize)
+            answer.append(self.DIR_NAME_LONG == other.DIR_NAME_LONG)
+            for eq in answer:
+                if eq is False:
+                    return False
+            return True
+
+    def __str__(self):
+        answer = f"{self.DIR_NAME=}\n" \
+                 f"{self.DIR_Attr=}\n" \
+                 f"{self.DIR_NTRes=}\n" \
+                 f"{self.DIR_CrtTimeTenth=}\n" \
+                 f"{self.DIR_CrtTime=}\n" \
+                 f"{self.DIR_CrtDate=}\n" \
+                 f"{self.DIR_LstAccDate=}\n" \
+                 f"{self.DIR_FstClusHI=}\n" \
+                 f"{self.DIR_WrtTime=}\n" \
+                 f"{self.DIR_WrtDate=}\n" \
+                 f"{self.DIR_FstClusLO=}\n" \
+                 f"{self.DIR_FileSize=}\n" \
+                 f"{self.DIR_NAME_LONG=}\n"
+        return answer
+
+
+class FATLongName:
+    LDIR_Ord: int = 0
+    LDIR_Name1: str = ''
+    LDIR_Attr: int = 0
+    LDIR_Type: int = 0
+    LDIR_Chksum: int = 0
+    LDIR_Name2: str = ''
+    LDIR_FstClusLO: int = 0
+    LDIR_Name3: str = ''

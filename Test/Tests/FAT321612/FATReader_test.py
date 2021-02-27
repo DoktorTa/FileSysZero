@@ -2,6 +2,7 @@ import pytest
 from pytest_mock import mocker
 
 from FAT321612 import FATReader, FATObject
+from FAT321612.FATObject import FATFile
 
 
 class TestFATReader:
@@ -223,3 +224,46 @@ class TestFATReader:
         answer = fatReader._FATReader__convert_byte_sequence_to_list_clusters(fatReader, byte_sequence_fat32)
 
         assert answer == list_fat32
+
+    def test_parse_directory(self):
+        one_cluster_dir = \
+            b"\x54\x45\x53\x54\x46\x49\x7e\x33\x54\x58\x54\x20\x00\x37\x0a\x93\x43\x51\x43\x51\x00\x00\x0a\x93\x43\x51\x21\x05\x00\x10\x00\x00" \
+            b"\x54\x45\x53\x54\x46\x49\x7e\x34\x54\x58\x54\x20\x00\x38\x0a\x93\x43\x51\x43\x51\x00\x00\x0a\x93\x43\x51\x22\x05\x00\x10\x00\x00"
+
+        file1 = FATFile()
+        file1.DIR_NAME = 'TESTFI~3TXT'
+        file1.DIR_Attr = 32
+        file1.DIR_NTRes = 0
+        file1.DIR_CrtTimeTenth = 55
+        file1.DIR_CrtTime = 37642
+        file1.DIR_CrtDate = 20803
+        file1.DIR_LstAccDate = 20803
+        file1.DIR_FstClusHI = 0
+        file1.DIR_WrtTime = 37642
+        file1.DIR_WrtDate = 20803
+        file1.DIR_FstClusLO = 1313
+        file1.DIR_FileSize = 4096
+
+        file2 = FATFile()
+        file2.DIR_NAME = 'TESTFI~4TXT'
+        file2.DIR_Attr = 32
+        file2.DIR_NTRes = 0
+        file2.DIR_CrtTimeTenth = 56
+        file2.DIR_CrtTime = 37642
+        file2.DIR_CrtDate = 20803
+        file2.DIR_LstAccDate = 20803
+        file2.DIR_FstClusHI = 0
+        file2.DIR_WrtTime = 37642
+        file2.DIR_WrtDate = 20803
+        file2.DIR_FstClusLO = 1314
+        file2.DIR_FileSize = 4096
+
+        fatReader = FATReader.FATReader
+
+        dir = fatReader.parse_directory(fatReader, one_cluster_dir)
+
+        assert file1 == dir[0]
+        assert file2 == dir[1]
+
+
+

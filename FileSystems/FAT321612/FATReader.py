@@ -3,7 +3,7 @@ import struct
 import functools
 import operator
 
-from FAT321612.FATObject import FATFileSys
+from FAT321612.FATObject import FATFileSys, FATFile, FATLongName
 
 
 class FATReader:
@@ -47,6 +47,57 @@ class FATReader:
         # self.file_system.FAT_TABLE = self.__convert_byte_sequence_to_list_clusters(fat_table)
 
         pass
+
+    def parse_directory(self, one_cluster_dir: bytes) -> list:
+        """
+            Изначально вам покажется что я путаюсь с тем что есть файл а что директория
+            , но это не так, видите ли, каждая директория в FAT является файлом, с
+            единственным отличием, флагом директории вместо флага файла.
+        :param one_cluster_dir:
+        :return:
+        """
+        files_in_dir: list = []
+        block_file_in_cluster: list = \
+            [one_cluster_dir[i: i + 32] for i in range(0, len(one_cluster_dir), 32)]
+
+        for file in block_file_in_cluster:
+            file_struct: tuple = struct.unpack('11c3B7HI', file)
+            files_in_dir.append(self.__parse_file(file_struct))
+
+        return files_in_dir
+
+    @staticmethod
+    def __parse_long_name(file_struct: tuple) -> FATLongName:
+        long_name = FATLongName()
+
+        long_name.LDIR_Ord = file_struct[0]
+        long_name.LDIR_Name1 = functools.reduce(operator.add, file_struct[1:10]).decode('ascii')
+        long_name.LDIR_Attr = file_struct[11]
+        long_name.LDIR_Type = file_struct[12]
+        long_name.LDIR_Chksum = file_struct[13]
+        long_name.LDIR_Name2 = functools.reduce(operator.add, file_struct[14:26]).decode('ascii')
+        long_name.LDIR_FstClusLO = file_struct[27]
+        long_name.LDIR_Name3 = functools.reduce(operator.add, file_struct[28:32]).decode('ascii')
+
+        return FATLongName
+
+    @staticmethod
+    def __parse_file(file_struct: tuple) -> FATFile:
+        file = FATFile()
+        file.DIR_NAME = functools.reduce(operator.add, file_struct[0:11]).decode('ascii')
+        file.DIR_Attr = file_struct[11]
+        file.DIR_NTRes = file_struct[12]
+        file.DIR_CrtTimeTenth = file_struct[13]
+        file.DIR_CrtTime = file_struct[14]
+        file.DIR_CrtDate = file_struct[15]
+        file.DIR_LstAccDate = file_struct[16]
+        file.DIR_FstClusHI = file_struct[17]
+        file.DIR_WrtTime = file_struct[18]
+        file.DIR_WrtDate = file_struct[19]
+        file.DIR_FstClusLO = file_struct[20]
+        file.DIR_FileSize = file_struct[21]
+
+        return file
 
     def __ask_eoc_label(self) -> None:
         """
@@ -94,9 +145,7 @@ class FATReader:
 
         return cluster_sequence, error
 
-
-
-    def __convert_byte_sequence_to_list_clusters(self, byte_sequence: bytearray) -> list:
+    def __convert_byte_sequence_to_list_clusters(self, byte_sequence: bytes) -> list:
         """
             Данный метод в данной версии способе работать только лишь с FAT32.
 
