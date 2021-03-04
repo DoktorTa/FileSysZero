@@ -61,6 +61,9 @@ class FATReader:
             [one_cluster_dir[i: i + 32] for i in range(0, len(one_cluster_dir), 32)]
 
         for file in block_file_in_cluster:
+            if block_file_in_cluster[11] == '16':
+
+            else:
             file_struct: tuple = struct.unpack('11c3B7HI', file)
             files_in_dir.append(self.__parse_file(file_struct))
 
@@ -79,7 +82,7 @@ class FATReader:
         long_name.LDIR_FstClusLO = file_struct[27]
         long_name.LDIR_Name3 = functools.reduce(operator.add, file_struct[28:32]).decode('ascii')
 
-        return FATLongName
+        return long_name
 
     @staticmethod
     def __parse_file(file_struct: tuple) -> FATFile:
