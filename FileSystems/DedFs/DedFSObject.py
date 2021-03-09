@@ -1,14 +1,14 @@
+from DedFs.OtherItem import ByteStrValidator, IntValidator
+
+
 class DedFSFileSys:
-    BYTE_IN_SECTOR: int = 0
-    SECTOR_IN_CLUSTER: int = 0
-    MAGIC_NUMBER: str = ''
-    COUNT_CLUSTER: int = 0
+    MBR: bytes = ByteStrValidator(512)
 
 
 class DedFSFile:
-    NAME_F: str = ''
-    FILE_MOD: int = 0
-    FIRST_CLUSTER: int = 0
-    COUNT_CLUSTER: int = 0
-    FILE_SIZE: int = 0
-    DATE_CREATE: int = 0
+    NAME_F: str = ByteStrValidator(32)
+    FILE_MOD: int = IntValidator(0, 255)
+    FIRST_CLUSTER: int = IntValidator(0, 65535)
+    COUNT_CLUSTER: int = IntValidator(0, 255)
+    FILE_SIZE: int = IntValidator(0, 4294967295)
+    DATE_CREATE: int = IntValidator(0, 4294967295)

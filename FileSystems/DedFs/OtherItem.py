@@ -36,7 +36,16 @@ class IntValidator(Validator):
             elif self.__min_value > value:
                 raise ValueError(f'The transmitted value is small, the value is limited from not below {self.__min_value}.')
 
-class StrValidator(Validator):
-    def __init__(self, ):
+
+class ByteStrValidator(Validator):
+    __len: int = 0
+
+    def __init__(self, _len: int):
+        self.__len = _len
 
     def validate(self, value):
+        if not isinstance(value, (str, bytes)):
+            raise TypeError(f'Type only str or bytes, you type is {type(value)}')
+        else:
+            if len(bytes(value)) != self.__len:
+                raise ValueError(f'The length of the string in bytes is error, len {self.__len} bytes')
