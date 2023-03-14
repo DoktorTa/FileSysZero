@@ -1,2 +1,4 @@
 /FilesystemsDocumentation/
 /Test/TestResources/
+.pytest_cache
+.idea

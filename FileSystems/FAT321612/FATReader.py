@@ -3,7 +3,7 @@ import struct
 import functools
 import operator
 
-from FAT321612.FATObject import FATFileSys, FATFile, FATLongName
+from FileSystems.FAT321612.FATObject import FATFileSys, FATFile, FATLongName
 
 
 class FATReader:
@@ -62,8 +62,9 @@ class FATReader:
 
         for file in block_file_in_cluster:
             if block_file_in_cluster[11] == '16':
-
+                pass
             else:
+                pass
             file_struct: tuple = struct.unpack('11c3B7HI', file)
             files_in_dir.append(self.__parse_file(file_struct))
 
