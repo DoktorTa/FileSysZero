@@ -3,7 +3,7 @@ from abc import ABCMeta, abstractmethod
 
 class IComSysRead(metaclass=ABCMeta):
     """
-        Интерфейс который определяет методы работы с файловыми системами в редиме чтения
+        Интерфейс, который определяет методы работы с файловыми системами в редиме чтения
     """
     __pointer_in_file: int = 0
     __pwd: list

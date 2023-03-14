@@ -7,7 +7,7 @@ class FileSystemZero:
     }
 
     def __init__(self):
-
+        pass
 
     def __enter__(self, file_path: str, mode: str, file_system_name: str):
 
