@@ -1,7 +1,4 @@
 import logging
-import struct
-import functools
-import operator
 from typing import List, Tuple
 
 from FileSystems.FAT321612.FATObject import FATFileSys, FATFile, FATLongName
@@ -22,8 +19,8 @@ class FATReader:
         super_block_part_two = super_block[36:90]
         # print(super_block_part_one)
         # print('two', super_block_part_two)
-        super_block_struct = struct.unpack('<H8chBhb2hB3h3i', super_block_part_one)
-        self.__parse_first_part_super_block(super_block_struct)
+        # super_block_struct = struct.unpack('<H8chBhb2hB3h3i', super_block_part_one)
+        # self.__parse_first_part_super_block(super_block_struct)
         self.__parse_fat32_super_block(super_block_part_two)
         root_dir_sector = self._calculation_num_fat_and_root_dir_sector()
 
@@ -61,7 +58,7 @@ class FATReader:
             [one_cluster_dir[i: i + 32] for i in range(0, len(one_cluster_dir), 32)]
 
         for fat_file in block_file_in_cluster:
-            file_struct: tuple = struct.unpack('11c3B7HI', fat_file)
+            # file_struct: tuple = struct.unpack('11c3B7HI', fat_file)
 
             if file_struct[self.POS_FILE_ATTR_IN_FILE_STRUCT] == FATFile.ATTRFile.ATTR_LONG_NAME \
                     and file_struct[self.POS_FILE_SIZE_IN_FILE_STRUCT] == 0:
@@ -166,7 +163,7 @@ class FATReader:
 
     def __parse_fat32_super_block(self, super_block_part_two):
         # print(len(super_block_part_two))
-        part_two_super_block = struct.unpack('<i2hi2h12c3BI11c8c', super_block_part_two)
+        # part_two_super_block = struct.unpack('<i2hi2h12c3BI11c8c', super_block_part_two)
         self.__parse_second_part_super_block(part_two_super_block)
 
     def _calculation_num_fat_and_root_dir_sector(self):

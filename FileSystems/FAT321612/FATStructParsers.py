@@ -1,6 +1,33 @@
+import struct
+import operator
+import functools
+
+from FileSystems.FAT321612.FATObject import FATFileSys, FATFile, FATLongName
+
+
 class FATStructParsers:
     POS_FILE_ATTR_IN_FILE_STRUCT = 11
     POS_FILE_SIZE_IN_FILE_STRUCT = 21
+
+    def parse_long_name(self, file_byte_struct: bytearray) -> FATLongName:
+        pass
+
+    def parse_file(self, fat_file: bytes) -> FATFile:
+        file_struct: tuple = struct.unpack('11c3B7HI', fat_file)
+        return self.__parse_file(file_struct)
+
+    def parse_first_part_super_block(self, file_system: FATFileSys, super_block_part_one: bytes) -> FATFileSys:
+        part_one_super_block = struct.unpack('<H9chBhb2hB3h3i', super_block_part_one)
+        return self.__parse_first_part_super_block(file_system, part_one_super_block)
+
+    def parse_second_part_super_block(self, file_system: FATFileSys, super_block_part_two: bytes) -> FATFileSys:
+        part_two_super_block = struct.unpack('<i2hi2h12c3BI11c8c', super_block_part_two)
+        return self.__parse_second_part_super_block(file_system, part_two_super_block)
+
+    def parse_third_part_super_block(self, file_byte_struct: bytearray) -> FATFileSys:
+        pass
+
+
     def __parse_long_name(self, file_struct: tuple) -> FATLongName:
         long_name = FATLongName()
 
@@ -32,43 +59,46 @@ class FATStructParsers:
 
         return fat_file
 
-    def __parse_second_part_super_block(self, super_block_struct: tuple):
-        self.file_system.BPB_FATSz32 = super_block_struct[0]
-        self.file_system.BPB_ExtFlags = super_block_struct[1]
-        self.file_system.BPB_FSVer = super_block_struct[2]
-        self.file_system.BPB_RootClus = super_block_struct[3]
-        self.file_system.BPB_FSInfo = super_block_struct[4]
-        self.file_system.BPB_BkBootSec = super_block_struct[5]
-        self.file_system.BPB_Reserved = functools.reduce(
-            operator.add, (super_block_struct[6:18])).decode('ascii')
-        self.__parse_third_part_super_block(super_block_struct[18:])
+    def __parse_first_part_super_block(self, file_system: FATFileSys, super_block_struct: tuple) -> FATFileSys:
+        file_system.BS_jmpBoot = super_block_struct[0]
+        file_system.BS_OEMName = functools.reduce(
+            operator.add, (super_block_struct[1:10])).decode('latin-1')
+        file_system.BPB_BytsPerSec = super_block_struct[10]
+        file_system.BPB_SecPerClus = super_block_struct[11]
+        file_system.BPB_RsvdSecCnt = super_block_struct[12]
+        file_system.BPB_NumFATs = super_block_struct[13]
+        file_system.BPB_RootEntCnt = super_block_struct[14]
+        file_system.BPB_TotSec16 = super_block_struct[15]
+        file_system.BPB_Media = super_block_struct[16]
+        file_system.BPB_FATSz16 = super_block_struct[17]
+        file_system.BPB_SecPerTrk = super_block_struct[18]
+        file_system.BPB_NumHeads = super_block_struct[19]
+        file_system.BPB_HiddSec = super_block_struct[20]
+        file_system.BPB_TotSec32 = super_block_struct[21]
 
-    def __parse_third_part_super_block(self, super_block_struct: tuple):
-        self.file_system.BS_DrvNum = super_block_struct[0]
-        self.file_system.BS_Reserved1 = super_block_struct[1]
-        self.file_system.BS_BootSig = super_block_struct[2]
-        self.file_system.BS_VolID = super_block_struct[3]
-        self.file_system.BS_VolLab = functools.reduce(
+        return file_system
+
+    def __parse_second_part_super_block(self, file_system: FATFileSys, super_block_struct: tuple):
+        file_system.BPB_FATSz32 = super_block_struct[0]
+        file_system.BPB_ExtFlags = super_block_struct[1]
+        file_system.BPB_FSVer = super_block_struct[2]
+        file_system.BPB_RootClus = super_block_struct[3]
+        file_system.BPB_FSInfo = super_block_struct[4]
+        file_system.BPB_BkBootSec = super_block_struct[5]
+        file_system.BPB_Reserved = functools.reduce(
+            operator.add, (super_block_struct[6:18])).decode('latin-1')
+        file_system = self.__parse_third_part_super_block(file_system, super_block_struct[18:])
+
+        return file_system
+
+    def __parse_third_part_super_block(self, file_system: FATFileSys, super_block_struct: tuple):
+        file_system.BS_DrvNum = super_block_struct[0]
+        file_system.BS_Reserved1 = super_block_struct[1]
+        file_system.BS_BootSig = super_block_struct[2]
+        file_system.BS_VolID = super_block_struct[3]
+        file_system.BS_VolLab = functools.reduce(
             operator.add, (super_block_struct[4:15])).decode('ascii')
-        self.file_system.BS_FilSysType = functools.reduce(
+        file_system.BS_FilSysType = functools.reduce(
             operator.add, (super_block_struct[15:24])).decode('ascii')
 
-    def __parse_first_part_super_block(self, super_block_struct: tuple):
-        self.file_system = FATFileSys()
-
-        self.file_system.BS_jmpBoot = super_block_struct[0]
-        self.file_system.BS_OEMName = functools.reduce(
-            operator.add, (super_block_struct[1:9])).decode('ascii')
-        self.file_system.BPB_BytsPerSec = super_block_struct[9]
-        self.file_system.BPB_SecPerClus = super_block_struct[10]
-        self.file_system.BPB_RsvdSecCnt = super_block_struct[11]
-        self.file_system.BPB_NumFATs = super_block_struct[12]
-        self.file_system.BPB_RootEntCnt = super_block_struct[13]
-        self.file_system.BPB_TotSec16 = super_block_struct[14]
-        self.file_system.BPB_Media = super_block_struct[15]
-        self.file_system.BPB_FATSz16 = super_block_struct[16]
-        self.file_system.BPB_SecPerTrk = super_block_struct[17]
-        self.file_system.BPB_NumHeads = super_block_struct[18]
-        self.file_system.BPB_HiddSec = super_block_struct[19]
-
-        self.file_system.BPB_TotSec32 = super_block_struct[20]
+        return file_system
