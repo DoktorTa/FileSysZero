@@ -1,8 +1,8 @@
 import pytest
-from pytest_mock import mocker
+# from pytest_mock import mocker
 
-from FAT321612 import FATReader, FATObject
-from FAT321612.FATObject import FATFile
+from FileSystems.FAT321612 import FATReader, FATObject
+from FileSystems.FAT321612.FATObject import FATFile
 
 
 class TestFATReader:
@@ -265,5 +265,27 @@ class TestFATReader:
         assert file1 == dir[0]
         assert file2 == dir[1]
 
+    def test_parse_file(self):
+        byte_str = b"\x54\x45\x53\x54\x46\x49\x7e\x33\x54\x58\x54\x20\x00\x37\x0a\x93" \
+                   b"\x43\x51\x43\x51\x00\x00\x0a\x93\x43\x51\x21\x05\x00\x10\x00\x00"
 
+        file1 = FATFile()
+        file1.DIR_NAME = 'TESTFI~3TXT'
+        file1.DIR_Attr = 32
+        file1.DIR_NTRes = 0
+        file1.DIR_CrtTimeTenth = 55
+        file1.DIR_CrtTime = 37642
+        file1.DIR_CrtDate = 20803
+        file1.DIR_LstAccDate = 20803
+        file1.DIR_FstClusHI = 0
+        file1.DIR_WrtTime = 37642
+        file1.DIR_WrtDate = 20803
+        file1.DIR_FstClusLO = 1313
+        file1.DIR_FileSize = 4096
+
+        fatReader = FATReader.FATReader
+
+        dir = fatReader._FATReader__parse_file(byte_str)
+
+        assert file1 == dir[0]
 

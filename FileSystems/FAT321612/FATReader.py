@@ -2,6 +2,7 @@ import logging
 import struct
 import functools
 import operator
+from typing import List, Tuple
 
 from FileSystems.FAT321612.FATObject import FATFileSys, FATFile, FATLongName
 
@@ -30,18 +31,16 @@ class FATReader:
         print(fat_seek_b)
         # print(self.file_system.__dict__)
 
-
     def get_root(self):
         """
-            Получить колличество секторов
+            Получить количество секторов
             Получить смешение корневого
-            перейти на смещшение
+            перейти на смещение
             прочесть кластер
-            декремента колличества секторов
+            декремента количества секторов
             распарсить сектор как каталог
         :return:
         """
-
 
         # fat_table = self.__read_block(fat_seek, self.file_system.fat_size)
         # self.file_system.FAT_TABLE = self.__convert_byte_sequence_to_list_clusters(fat_table)
@@ -50,58 +49,27 @@ class FATReader:
 
     def parse_directory(self, one_cluster_dir: bytes) -> list:
         """
-            Изначально вам покажется что я путаюсь с тем что есть файл а что директория
-            , но это не так, видите ли, каждая директория в FAT является файлом, с
+            Изначально вам покажется что я путаюсь с тем что есть файл, а что директория
+            но это не так, видите ли, каждая директория в FAT является файлом, с
             единственным отличием, флагом директории вместо флага файла.
         :param one_cluster_dir:
         :return:
         """
-        files_in_dir: list = []
+        files_in_dir: List[Tuple[FATFile, List[FATLongName]]] = []
+        long_name_group: List[FATLongName] = []
         block_file_in_cluster: list = \
             [one_cluster_dir[i: i + 32] for i in range(0, len(one_cluster_dir), 32)]
 
-        for file in block_file_in_cluster:
-            if block_file_in_cluster[11] == '16':
-                pass
+        for fat_file in block_file_in_cluster:
+            file_struct: tuple = struct.unpack('11c3B7HI', fat_file)
+
+            if file_struct[self.POS_FILE_ATTR_IN_FILE_STRUCT] == FATFile.ATTRFile.ATTR_LONG_NAME \
+                    and file_struct[self.POS_FILE_SIZE_IN_FILE_STRUCT] == 0:
+                long_name_group.append(self.__parse_long_name(file_struct))
             else:
-                pass
-            file_struct: tuple = struct.unpack('11c3B7HI', file)
-            files_in_dir.append(self.__parse_file(file_struct))
+                files_in_dir.append((self.__parse_file(file_struct), long_name_group))
 
         return files_in_dir
-
-    @staticmethod
-    def __parse_long_name(file_struct: tuple) -> FATLongName:
-        long_name = FATLongName()
-
-        long_name.LDIR_Ord = file_struct[0]
-        long_name.LDIR_Name1 = functools.reduce(operator.add, file_struct[1:10]).decode('ascii')
-        long_name.LDIR_Attr = file_struct[11]
-        long_name.LDIR_Type = file_struct[12]
-        long_name.LDIR_Chksum = file_struct[13]
-        long_name.LDIR_Name2 = functools.reduce(operator.add, file_struct[14:26]).decode('ascii')
-        long_name.LDIR_FstClusLO = file_struct[27]
-        long_name.LDIR_Name3 = functools.reduce(operator.add, file_struct[28:32]).decode('ascii')
-
-        return long_name
-
-    @staticmethod
-    def __parse_file(file_struct: tuple) -> FATFile:
-        file = FATFile()
-        file.DIR_NAME = functools.reduce(operator.add, file_struct[0:11]).decode('ascii')
-        file.DIR_Attr = file_struct[11]
-        file.DIR_NTRes = file_struct[12]
-        file.DIR_CrtTimeTenth = file_struct[13]
-        file.DIR_CrtTime = file_struct[14]
-        file.DIR_CrtDate = file_struct[15]
-        file.DIR_LstAccDate = file_struct[16]
-        file.DIR_FstClusHI = file_struct[17]
-        file.DIR_WrtTime = file_struct[18]
-        file.DIR_WrtDate = file_struct[19]
-        file.DIR_FstClusLO = file_struct[20]
-        file.DIR_FileSize = file_struct[21]
-
-        return file
 
     def __ask_eoc_label(self) -> None:
         """
@@ -201,47 +169,6 @@ class FATReader:
         part_two_super_block = struct.unpack('<i2hi2h12c3BI11c8c', super_block_part_two)
         self.__parse_second_part_super_block(part_two_super_block)
 
-    def __parse_second_part_super_block(self, super_block_struct: tuple):
-        self.file_system.BPB_FATSz32 = super_block_struct[0]
-        self.file_system.BPB_ExtFlags = super_block_struct[1]
-        self.file_system.BPB_FSVer = super_block_struct[2]
-        self.file_system.BPB_RootClus = super_block_struct[3]
-        self.file_system.BPB_FSInfo = super_block_struct[4]
-        self.file_system.BPB_BkBootSec = super_block_struct[5]
-        self.file_system.BPB_Reserved = functools.reduce(
-            operator.add, (super_block_struct[6:18])).decode('ascii')
-        self.__parse_third_part_super_block(super_block_struct[18:])
-
-    def __parse_third_part_super_block(self, super_block_struct: tuple):
-        self.file_system.BS_DrvNum = super_block_struct[0]
-        self.file_system.BS_Reserved1 = super_block_struct[1]
-        self.file_system.BS_BootSig = super_block_struct[2]
-        self.file_system.BS_VolID = super_block_struct[3]
-        self.file_system.BS_VolLab = functools.reduce(
-            operator.add, (super_block_struct[4:15])).decode('ascii')
-        self.file_system.BS_FilSysType = functools.reduce(
-            operator.add, (super_block_struct[15:24])).decode('ascii')
-
-    def __parse_first_part_super_block(self, super_block_struct: tuple):
-        self.file_system = FATFileSys()
-
-        self.file_system.BS_jmpBoot = super_block_struct[0]
-        self.file_system.BS_OEMName = functools.reduce(
-            operator.add, (super_block_struct[1:9])).decode('ascii')
-        self.file_system.BPB_BytsPerSec = super_block_struct[9]
-        self.file_system.BPB_SecPerClus = super_block_struct[10]
-        self.file_system.BPB_RsvdSecCnt = super_block_struct[11]
-        self.file_system.BPB_NumFATs = super_block_struct[12]
-        self.file_system.BPB_RootEntCnt = super_block_struct[13]
-        self.file_system.BPB_TotSec16 = super_block_struct[14]
-        self.file_system.BPB_Media = super_block_struct[15]
-        self.file_system.BPB_FATSz16 = super_block_struct[16]
-        self.file_system.BPB_SecPerTrk = super_block_struct[17]
-        self.file_system.BPB_NumHeads = super_block_struct[18]
-        self.file_system.BPB_HiddSec = super_block_struct[19]
-
-        self.file_system.BPB_TotSec32 = super_block_struct[20]
-
     def _calculation_num_fat_and_root_dir_sector(self):
         """
             Функция вычисляет номер фс fat и устанавливает его для объекта,
@@ -278,7 +205,7 @@ class FATReader:
     @staticmethod
     def __calculation_count_of_clusters(data_sector: int, BPB_SecPerClus: int) -> int:
         """
-            :return: Колличество всех кластеров данных в системе.
+            :return: Количество всех кластеров данных в системе.
         """
         return data_sector // BPB_SecPerClus
 
@@ -286,7 +213,7 @@ class FATReader:
     def __calculation_data_sector(total_sector: int, all_fat_size: int,
                                   root_dir_sector: int, BPB_ResvdSecCnt: int) -> int:
         """
-            :return: Колличество всех секторов с данными.
+            :return: Количество всех секторов с данными.
         """
         no_data_sector = (BPB_ResvdSecCnt + all_fat_size + root_dir_sector)
         return total_sector - no_data_sector

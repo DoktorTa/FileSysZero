@@ -15,8 +15,6 @@ class FileSystemZero:
             raise ValueError("This file is not fs file.")
 
         self.__import_package(file_system_name)
-
-
         pass
 
     def __import_package(self, name_fs: str) -> None:
