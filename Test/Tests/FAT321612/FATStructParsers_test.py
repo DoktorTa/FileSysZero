@@ -1,7 +1,7 @@
 import pytest
 
 from FileSystems.FAT321612 import FATReader
-from FileSystems.FAT321612.FATObject import FATFileSys, FATFile
+from FileSystems.FAT321612.FATObject import FATFileSys, FATFile, FATLongName
 from FileSystems.FAT321612.FATStructParsers import FATStructParsers
 
 
@@ -31,11 +31,31 @@ class TestFATStructParsers:
 
         assert file1 == dir
 
+        def test_parse_long_name(self):
+            byte_str = b'\x41\x74\x00\x33\x00\x32\x00\x00\x00\xFF\xFF\x0F\x00\xE0\xFF\xFF' \
+                       b'\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x00\x00\xFF\xFF\xFF\xFF'
+
+            long_name = FATLongName()
+            long_name.LDIR_Ord = 65
+            long_name.LDIR_Name1 = 'T32 \xff\xff'
+            long_name.LDIR_Attr = 15
+            long_name.LDIR_Type = 0
+            long_name.LDIR_Chksum = 224
+            long_name.LDIR_Name2 = '\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff'
+            long_name.LDIR_FstClusLO = 0
+            long_name.LDIR_Name3 = '\xff\xff\xff\xff'
+
+            fat_parser = FATStructParsers()
+
+            dir = fat_parser.parse_file(byte_str)
+
+            assert file1 == dir
+
     def test_parse_first_part_super_block(self):
         fat32_obj = FATFileSys()
 
-        fat32_obj.BS_jmpBoot = 22763
-        fat32_obj.BS_OEMName = '\x90mkfs.fat'
+        fat32_obj.BS_jmpBoot = b'\xeb\x58\x90'
+        fat32_obj.BS_OEMName = 'mkfs.fat'
         fat32_obj.BPB_BytsPerSec = 512
         fat32_obj.BPB_SecPerClus = 8
         fat32_obj.BPB_RsvdSecCnt = 32
@@ -51,7 +71,7 @@ class TestFATStructParsers:
 
         block_fat32 = b'\xeb\x58\x90\x6d\x6b\x66\x73\x2e\x66\x61\x74\x00\x02\x08\x20\x00' \
                       b'\x02\x00\x00\x00\x00\xf8\x00\x00\x3f\x00\xff\x00\x00\x00\x00\x00' \
-                      b'\x00\x00\x20\x00\x00\x08\x00\x00' \
+                      b'\x00\x00\x20\x00'
 
         fat_parser = FATStructParsers()
         file_sys = FATFileSys()
@@ -59,23 +79,48 @@ class TestFATStructParsers:
 
         assert file_sys.__dict__ == fat32_obj.__dict__
 
+    def test_parse_second_part_super_block(self):
+        fat32_obj = FATFileSys()
+
+        fat32_obj.BPB_FATSz32 = 2048
+        fat32_obj.BPB_ExtFlags = 0
+        fat32_obj.BPB_FSVer = 0
+        fat32_obj.BPB_RootClus = 2
+        fat32_obj.BPB_FSInfo = 1
+        fat32_obj.BPB_BkBootSec = 6
+        fat32_obj.BPB_Reserved = '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+
+        block_fat32 = b'\x00\x08\x00\x00\x00\x00\x00\x00\x02\x00\x00\x00\x01\x00\x06\x00' \
+                      b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+
+        fat_parser = FATStructParsers()
+        file_sys = FATFileSys()
+        file_sys = fat_parser.parse_second_part_super_block(file_sys, block_fat32)
+
+        assert file_sys.__dict__ == fat32_obj.__dict__
+
+    def test_parse_third_part_super_block(self):
+        fat32_obj = FATFileSys()
+
+        fat32_obj.BS_DrvNum = 128
+        fat32_obj.BS_Reserved1 = 0
+        fat32_obj.BS_BootSig = 41
+        fat32_obj.BS_VolID = 3379013315
+        fat32_obj.BS_VolLab = 'NO NAME    '
+        fat32_obj.BS_FilSysType = 'FAT32   '
+
+        block_fat32 = b'\x80\x00\x29\xc3\xa6\x67\xc9\x4e\x4f\x20\x4e\x41\x4d\x45\x20\x20' \
+                      b'\x20\x20\x46\x41\x54\x33\x32\x20\x20\x20'
+
+        fat_parser = FATStructParsers()
+        file_sys = FATFileSys()
+        file_sys = fat_parser.parse_third_part_super_block(file_sys, block_fat32)
+
+        assert file_sys.__dict__ == fat32_obj.__dict__
+
+
 """
 
-        # fat32_obj.BPB_FATSz32 = 2048
-        # fat32_obj.BPB_ExtFlags = 0
-        # fat32_obj.BPB_FSVer = 0
-        # fat32_obj.BPB_RootClus = 2
-        # fat32_obj.BPB_FSInfo = 1
-        # fat32_obj.BPB_BkBootSec = 6
-        # fat32_obj.BPB_Reserved = '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
-        #
-        # fat32_obj.BS_DrvNum = 128
-        # fat32_obj.BS_Reserved1 = 0
-        # fat32_obj.BS_BootSig = 41
-        # fat32_obj.BS_VolID = 3379013315
-        # fat32_obj.BS_VolLab = 'NO NAME    '
-        # fat32_obj.BS_FilSysType = 'FAT32   '
-        #
         # fat32_obj.fat_size = 2048
         # fat32_obj.all_fat_size = 4096
 
@@ -111,6 +156,4 @@ class TestFATStructParsers:
         #               b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00' \
         #               b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00' \
         #               b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x55\xaa'
-
-        # mocker.patch('FAT321612.FATReader.FATReader._FATReader__read_block', return_value=block_fat32)
 """

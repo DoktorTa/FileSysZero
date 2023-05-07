@@ -9,24 +9,25 @@ class FATStructParsers:
     POS_FILE_ATTR_IN_FILE_STRUCT = 11
     POS_FILE_SIZE_IN_FILE_STRUCT = 21
 
-    def parse_long_name(self, file_byte_struct: bytearray) -> FATLongName:
-        pass
+    def parse_long_name(self, fat_long_name: bytes) -> FATLongName:
+        long_struct: tuple = struct.unpack('<B10c3B12cH4c', fat_long_name)
+        return self.__parse_long_name(long_struct)
 
     def parse_file(self, fat_file: bytes) -> FATFile:
         file_struct: tuple = struct.unpack('11c3B7HI', fat_file)
         return self.__parse_file(file_struct)
 
     def parse_first_part_super_block(self, file_system: FATFileSys, super_block_part_one: bytes) -> FATFileSys:
-        part_one_super_block = struct.unpack('<H9chBhb2hB3h3i', super_block_part_one)
+        part_one_super_block: tuple = struct.unpack('<3c8chBhb2hB3h2i', super_block_part_one)
         return self.__parse_first_part_super_block(file_system, part_one_super_block)
 
     def parse_second_part_super_block(self, file_system: FATFileSys, super_block_part_two: bytes) -> FATFileSys:
-        part_two_super_block = struct.unpack('<i2hi2h12c3BI11c8c', super_block_part_two)
+        part_two_super_block: tuple = struct.unpack('<i2hi2h12c', super_block_part_two)
         return self.__parse_second_part_super_block(file_system, part_two_super_block)
 
-    def parse_third_part_super_block(self, file_byte_struct: bytearray) -> FATFileSys:
-        pass
-
+    def parse_third_part_super_block(self, file_system: FATFileSys, super_block_part_three: bytes) -> FATFileSys:
+        part_three_super_block: tuple = struct.unpack('<3BI11c8c', super_block_part_three)
+        return self.__parse_third_part_super_block(file_system, part_three_super_block)
 
     def __parse_long_name(self, file_struct: tuple) -> FATLongName:
         long_name = FATLongName()
@@ -60,21 +61,22 @@ class FATStructParsers:
         return fat_file
 
     def __parse_first_part_super_block(self, file_system: FATFileSys, super_block_struct: tuple) -> FATFileSys:
-        file_system.BS_jmpBoot = super_block_struct[0]
+        file_system.BS_jmpBoot = functools.reduce(
+            operator.add, (super_block_struct[0:3]))
         file_system.BS_OEMName = functools.reduce(
-            operator.add, (super_block_struct[1:10])).decode('latin-1')
-        file_system.BPB_BytsPerSec = super_block_struct[10]
-        file_system.BPB_SecPerClus = super_block_struct[11]
-        file_system.BPB_RsvdSecCnt = super_block_struct[12]
-        file_system.BPB_NumFATs = super_block_struct[13]
-        file_system.BPB_RootEntCnt = super_block_struct[14]
-        file_system.BPB_TotSec16 = super_block_struct[15]
-        file_system.BPB_Media = super_block_struct[16]
-        file_system.BPB_FATSz16 = super_block_struct[17]
-        file_system.BPB_SecPerTrk = super_block_struct[18]
-        file_system.BPB_NumHeads = super_block_struct[19]
-        file_system.BPB_HiddSec = super_block_struct[20]
-        file_system.BPB_TotSec32 = super_block_struct[21]
+            operator.add, (super_block_struct[3:11])).decode('latin-1')
+        file_system.BPB_BytsPerSec = super_block_struct[11]
+        file_system.BPB_SecPerClus = super_block_struct[12]
+        file_system.BPB_RsvdSecCnt = super_block_struct[13]
+        file_system.BPB_NumFATs = super_block_struct[14]
+        file_system.BPB_RootEntCnt = super_block_struct[15]
+        file_system.BPB_TotSec16 = super_block_struct[16]
+        file_system.BPB_Media = super_block_struct[17]
+        file_system.BPB_FATSz16 = super_block_struct[18]
+        file_system.BPB_SecPerTrk = super_block_struct[19]
+        file_system.BPB_NumHeads = super_block_struct[20]
+        file_system.BPB_HiddSec = super_block_struct[21]
+        file_system.BPB_TotSec32 = super_block_struct[22]
 
         return file_system
 
@@ -87,7 +89,6 @@ class FATStructParsers:
         file_system.BPB_BkBootSec = super_block_struct[5]
         file_system.BPB_Reserved = functools.reduce(
             operator.add, (super_block_struct[6:18])).decode('latin-1')
-        file_system = self.__parse_third_part_super_block(file_system, super_block_struct[18:])
 
         return file_system
 
@@ -97,8 +98,8 @@ class FATStructParsers:
         file_system.BS_BootSig = super_block_struct[2]
         file_system.BS_VolID = super_block_struct[3]
         file_system.BS_VolLab = functools.reduce(
-            operator.add, (super_block_struct[4:15])).decode('ascii')
+            operator.add, (super_block_struct[4:15])).decode('latin-1')
         file_system.BS_FilSysType = functools.reduce(
-            operator.add, (super_block_struct[15:24])).decode('ascii')
+            operator.add, (super_block_struct[15:24])).decode('latin-1')
 
         return file_system
