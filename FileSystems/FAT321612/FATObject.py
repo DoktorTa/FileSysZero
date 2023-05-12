@@ -1,3 +1,15 @@
+class FSInfo:
+    LEN_FS_INFO: int = 512
+
+    FSI_LeadSig: int = 0  # 0x41615252
+    FSI_Reserved1: bytes = b''  # 0
+    FSI_StrucSig: int = 0  # 0x61417272
+    FSI_Free_Count: int = 0
+    FSI_Nxt_Free: int = 0
+    FSI_Reserved2: int = b''  # 0
+    FSI_TrailSig: int = 0  # 0xAA550000
+
+
 class FATFileSys:
     FAT16_LEN_RECORD = 2
     FAT32_LEN_RECORD = 4
@@ -5,18 +17,20 @@ class FATFileSys:
     FAT_VERSION = "FAT"
     BS_jmpBoot: int = 0
     BS_OEMName: int = 0
-    BPB_BytsPerSec: int = 0
+    BPB_BytsPerSec: int = 0  # 12 16 используют только 512
     BPB_SecPerClus: int = 0
     BPB_RsvdSecCnt: int = 0
     BPB_NumFATs: int = 0
-    BPB_RootEntCnt: int = 0
-    BPB_TotSec16: int = 0
+    BPB_RootEntCnt: int = 0  # 0 для FAT32
+    BPB_TotSec16: int = 0  # 0 для FAT32
     BPB_Media: int = 0
-    BPB_FATSz16: int = 0
+    BPB_FATSz16: int = 0  # 0 для FAT32
     BPB_SecPerTrk: int = 0
     BPB_NumHeads: int = 0
     BPB_HiddSec: int = 0
-    BPB_TotSec32: int = 0
+    BPB_TotSec32: int = 0  # Для томов FAT32 это поле должно быть ненулевым.
+    # Для томов FAT12 / FAT16 это поле содержит количество секторов,
+    # если BPB_TotSec16 равно 0 (количество больше или равно 0x10000).
 
     # FAT1612
     BS_DrvNum: int = 0
@@ -50,6 +64,8 @@ class FATFileSys:
     EOC_LABEL: int = 0
     ERROR_LABEL: int = 0
 
+    fs_info: FSInfo = None
+
     def set_fat_version(self, fat_version: str):
         if fat_version in "FAT12FAT16FAT32":
             self.FAT_VERSION = fat_version
@@ -59,7 +75,6 @@ class FATFileSys:
                       f"{self.fat_size=}\n" \
                       f"{self.all_fat_size=}\n"
         return string_info
-
 
 class FATFile:
     DIR_NAME: str = ''

@@ -2,7 +2,7 @@ import struct
 import operator
 import functools
 
-from FileSystems.FAT321612.FATObject import FATFileSys, FATFile, FATLongName
+from FileSystems.FAT321612.FATObject import FATFileSys, FATFile, FATLongName, FSInfo
 
 
 class FATStructParsers:
@@ -16,6 +16,10 @@ class FATStructParsers:
     def parse_file(self, fat_file: bytes) -> FATFile:
         file_struct: tuple = struct.unpack('11c3B7HI', fat_file)
         return self.__parse_file(file_struct)
+
+    def parse_fs_info(self, fs_info_block: bytes, fs_info: FSInfo) -> FSInfo:
+        fs_info_struct: tuple = struct.unpack('<I480c3I12cI', fs_info_block)
+        return self.__parse_fs_info(fs_info, fs_info_struct)
 
     def parse_first_part_super_block(self, file_system: FATFileSys, super_block_part_one: bytes) -> FATFileSys:
         part_one_super_block: tuple = struct.unpack('<3c8chBhb2hB3h2i', super_block_part_one)
@@ -33,19 +37,19 @@ class FATStructParsers:
         long_name = FATLongName()
 
         long_name.LDIR_Ord = file_struct[0]
-        long_name.LDIR_Name1 = functools.reduce(operator.add, file_struct[1:10]).decode('ascii')
+        long_name.LDIR_Name1 = functools.reduce(operator.add, file_struct[1:11]).decode('latin-1')
         long_name.LDIR_Attr = file_struct[self.POS_FILE_ATTR_IN_FILE_STRUCT]
         long_name.LDIR_Type = file_struct[12]
         long_name.LDIR_Chksum = file_struct[13]
-        long_name.LDIR_Name2 = functools.reduce(operator.add, file_struct[14:26]).decode('ascii')
-        long_name.LDIR_FstClusLO = file_struct[27]
-        long_name.LDIR_Name3 = functools.reduce(operator.add, file_struct[28:32]).decode('ascii')
+        long_name.LDIR_Name2 = functools.reduce(operator.add, file_struct[14:26]).decode('latin-1')
+        long_name.LDIR_FstClusLO = file_struct[26]
+        long_name.LDIR_Name3 = functools.reduce(operator.add, file_struct[27:32]).decode('latin-1')
 
         return long_name
 
     def __parse_file(self, file_struct: tuple) -> FATFile:
         fat_file = FATFile()
-        fat_file.DIR_NAME = functools.reduce(operator.add, file_struct[0:11]).decode('ascii')
+        fat_file.DIR_NAME = functools.reduce(operator.add, file_struct[0:11]).decode('latin-1')
         fat_file.DIR_Attr = file_struct[self.POS_FILE_ATTR_IN_FILE_STRUCT]
         fat_file.DIR_NTRes = file_struct[12]
         fat_file.DIR_CrtTimeTenth = file_struct[13]
@@ -59,6 +63,20 @@ class FATStructParsers:
         fat_file.DIR_FileSize = file_struct[self.POS_FILE_SIZE_IN_FILE_STRUCT]
 
         return fat_file
+
+    @staticmethod
+    def __parse_fs_info(fs_info: FSInfo, fs_info_struct: tuple) -> FSInfo:
+        fs_info.FSI_LeadSig = fs_info_struct[0]
+        fs_info.FSI_Reserved1 = functools.reduce(
+            operator.add, (fs_info_struct[1:481])).decode('latin-1')
+        fs_info.FSI_StrucSig = fs_info_struct[481]
+        fs_info.FSI_Free_Count = fs_info_struct[482]
+        fs_info.FSI_Nxt_Free = fs_info_struct[483]
+        fs_info.FSI_Reserved2 = functools.reduce(
+            operator.add, (fs_info_struct[484:496])).decode('latin-1')
+        fs_info.FSI_TrailSig = fs_info_struct[496]
+
+        return fs_info
 
     def __parse_first_part_super_block(self, file_system: FATFileSys, super_block_struct: tuple) -> FATFileSys:
         file_system.BS_jmpBoot = functools.reduce(

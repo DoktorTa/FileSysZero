@@ -1,7 +1,7 @@
 import pytest
 
 from FileSystems.FAT321612 import FATReader
-from FileSystems.FAT321612.FATObject import FATFileSys, FATFile, FATLongName
+from FileSystems.FAT321612.FATObject import FATFileSys, FATFile, FATLongName, FSInfo
 from FileSystems.FAT321612.FATStructParsers import FATStructParsers
 
 
@@ -31,25 +31,36 @@ class TestFATStructParsers:
 
         assert file1 == dir
 
-        def test_parse_long_name(self):
-            byte_str = b'\x41\x74\x00\x33\x00\x32\x00\x00\x00\xFF\xFF\x0F\x00\xE0\xFF\xFF' \
-                       b'\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x00\x00\xFF\xFF\xFF\xFF'
+    def test_parse_long_name(self):
+        byte_str = b'\x41\x74\x00\x33\x00\x32\x00\x00\x00\xFF\xFF\x0F\x00\xE0\xFF\xFF' \
+                   b'\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x00\x00\xFF\xFF\xFF\xFF'
 
-            long_name = FATLongName()
-            long_name.LDIR_Ord = 65
-            long_name.LDIR_Name1 = 'T32 \xff\xff'
-            long_name.LDIR_Attr = 15
-            long_name.LDIR_Type = 0
-            long_name.LDIR_Chksum = 224
-            long_name.LDIR_Name2 = '\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff'
-            long_name.LDIR_FstClusLO = 0
-            long_name.LDIR_Name3 = '\xff\xff\xff\xff'
+        long_name = FATLongName()
+        long_name.LDIR_Ord = 65
+        long_name.LDIR_Name1 = 't\x003\x002\x00\x00\x00ÿÿ'
+        long_name.LDIR_Attr = 15
+        long_name.LDIR_Type = 0
+        long_name.LDIR_Chksum = 224
+        long_name.LDIR_Name2 = 'ÿÿÿÿÿÿÿÿÿÿÿÿ'
+        long_name.LDIR_FstClusLO = 0
+        long_name.LDIR_Name3 = 'ÿÿÿÿ'
 
-            fat_parser = FATStructParsers()
+        fat_parser = FATStructParsers()
 
-            dir = fat_parser.parse_file(byte_str)
+        long_file_parse = fat_parser.parse_long_name(byte_str)
 
-            assert file1 == dir
+        assert long_name.__dict__ == long_file_parse.__dict__
+
+        """
+       'LDIR_Ord': 65,                  'LDIR_Ord': 65,
+       'LDIR_Name1': 'T32 ÿÿ',          'LDIR_Name1': 't\x003\x002\x00\x00\x00ÿ'
+       'LDIR_Attr': 15,                 'LDIR_Attr': 15
+       'LDIR_Type': 0,                  'LDIR_Type': 0
+       'LDIR_Chksum': 224,              'LDIR_Chksum': 224
+       'LDIR_Name2': 'ÿÿÿÿÿÿÿÿÿÿÿÿ',    'LDIR_Name2': 'ÿÿÿÿÿÿÿÿÿÿÿÿ'
+       'LDIR_FstClusLO': 0,             'LDIR_FstClusLO': b'\xff'
+       'LDIR_Name3': 'ÿÿÿÿ'             'LDIR_Name3': 'ÿÿÿ'
+        """
 
     def test_parse_first_part_super_block(self):
         fat32_obj = FATFileSys()
@@ -118,11 +129,60 @@ class TestFATStructParsers:
 
         assert file_sys.__dict__ == fat32_obj.__dict__
 
+    def test_parse_fs_info_block(self):
+        fs_info = FSInfo()
+        fs_info.FSI_LeadSig = 0x41615252
+        fs_info.FSI_Reserved1 = '\x00' * 480
+        fs_info.FSI_StrucSig = 0x61417272
+        fs_info.FSI_Free_Count = 0x000189A2
+        fs_info.FSI_Nxt_Free = 0x00000017
+        fs_info.FSI_Reserved2 = '\x00' * 12
+        fs_info.FSI_TrailSig = 0xAA550000
+
+        fs_info_block = b'\x52\x52\x61\x41\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00' \
+                        b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00' \
+                        b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00' \
+                        b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00' \
+                        b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00' \
+                        b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00' \
+                        b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00' \
+                        b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00' \
+                        b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00' \
+                        b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00' \
+                        b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00' \
+                        b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00' \
+                        b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00' \
+                        b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00' \
+                        b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00' \
+                        b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00' \
+                        b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00' \
+                        b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00' \
+                        b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00' \
+                        b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00' \
+                        b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00' \
+                        b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00' \
+                        b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00' \
+                        b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00' \
+                        b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00' \
+                        b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00' \
+                        b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00' \
+                        b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00' \
+                        b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00' \
+                        b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00' \
+                        b'\x00\x00\x00\x00\x72\x72\x41\x61\xA2\x89\x01\x00\x17\x00\x00\x00' \
+                        b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x55\xAA'
+
+        fat_parser = FATStructParsers()
+        fs_info_test = FSInfo()
+        fs_info_test = fat_parser.parse_fs_info(fs_info_block, fs_info_test)
+
+        assert fs_info.__dict__ == fs_info_test.__dict__
 
 """
 
         # fat32_obj.fat_size = 2048
         # fat32_obj.all_fat_size = 4096
+        # 0x41615252
 
         # block_fat32 = b'\xeb\x58\x90\x6d\x6b\x66\x73\x2e\x66\x61\x74\x00\x02\x08\x20\x00' \
         #               b'\x02\x00\x00\x00\x00\xf8\x00\x00\x3f\x00\xff\x00\x00\x00\x00\x00' \

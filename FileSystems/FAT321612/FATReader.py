@@ -1,32 +1,66 @@
 import logging
 from typing import List, Tuple
 
-from FileSystems.FAT321612.FATObject import FATFileSys, FATFile, FATLongName
+from FileSystems.FAT321612.FATObject import FATFileSys, FATFile, FATLongName, FSInfo
+from FileSystems.FAT321612.FATStructParsers import FATStructParsers
 
 
 class FATReader:
     __mount_fs = None
     file_system: FATFileSys
+    __struct_parsers: FATStructParsers
 
     def __init__(self, mount_fs):
         self.__mount_fs = mount_fs
+        self.__struct_parsers = FATStructParsers()
         # self.__parse_super_block()
 
     def __parse_super_block(self):
         len_super_block = 512
         super_block = self.__read_block(0, len_super_block)
-        super_block_part_one = super_block[1:40]
-        super_block_part_two = super_block[36:90]
-        # print(super_block_part_one)
-        # print('two', super_block_part_two)
-        # super_block_struct = struct.unpack('<H8chBhb2hB3h3i', super_block_part_one)
-        # self.__parse_first_part_super_block(super_block_struct)
-        self.__parse_fat32_super_block(super_block_part_two)
+        super_block_part_one = super_block[1:36]
+
+        self.file_system = FATFileSys()
+        self.__struct_parsers.parse_first_part_super_block(self.file_system, super_block_part_one)
+
+        super_block_part_two = super_block[36:64]
+
+        # Для расчета номера версии файловой системы, мне необходимо использовать поле BPB_FATSz32,
+        # данное поле существует только у FAT32, поэтому мы изначально парсим ФС как FAT32 (А так же ради оптимизации)
+        # в случае если ФС не FAT32 нам нужно занулить часть значений которые были распаршены
+        # ввиду того, что они не существуют на ФС FAT16 и FAT12.
+
+        self.__struct_parsers.parse_second_part_super_block(self.file_system, super_block_part_two)
+        if self.file_system.FAT_VERSION == "FAT32":
+            super_block_part_three = super_block[64:90]
+            self.__struct_parsers.parse_third_part_super_block(self.file_system, super_block_part_three)
+            self.__read_fs_info()
+        else:
+            super_block_part_two = super_block[36:62]
+            self.__zeroing_out_erroneous_entries()
+            self.__struct_parsers.parse_second_part_super_block(self.file_system, super_block_part_two)
+
+        # Для FAT32 всегда 0
         root_dir_sector = self._calculation_num_fat_and_root_dir_sector()
+
 
         fat_seek_b = self.file_system.BPB_RsvdSecCnt * self.file_system.BPB_BytsPerSec
         print(fat_seek_b)
         # print(self.file_system.__dict__)
+
+    def __read_fs_info(self):
+        seek_fs_info = self.file_system.BPB_FSInfo * self.file_system.BPB_BytsPerSec
+        fs_info_block = self.__read_block(seek_fs_info, FSInfo.LEN_FS_INFO)
+        self.file_system.fs_info = self.__struct_parsers.parse_fs_info(fs_info_block, FSInfo())
+
+    def __zeroing_out_erroneous_entries(self):
+        self.file_system.BPB_FATSz32 = 0
+        self.file_system.BPB_ExtFlags = 0
+        self.file_system.BPB_FSVer = 0
+        self.file_system.BPB_RootClus = 0
+        self.file_system.BPB_FSInfo = 0
+        self.file_system.BPB_BkBootSec = 0
+        self.file_system.BPB_Reserved = 0
 
     def get_root(self):
         """
@@ -160,11 +194,6 @@ class FATReader:
         this_fat_sec_num = self.file_system.BPB_RsvdSecCnt + (fat_offset // self.file_system.BPB_BytsPerSec)
         this_fat_sec_num += + num_fat_seek
         this_fat_ent_offset = fat_offset % self.file_system.BPB_BytsPerSec
-
-    def __parse_fat32_super_block(self, super_block_part_two):
-        # print(len(super_block_part_two))
-        # part_two_super_block = struct.unpack('<i2hi2h12c3BI11c8c', super_block_part_two)
-        self.__parse_second_part_super_block(part_two_super_block)
 
     def _calculation_num_fat_and_root_dir_sector(self):
         """
